@@ -1,12 +1,12 @@
 {
   "name": "bjs",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "begger version of rxjs",
   "main": "dist/index.js",
   "module": "src/index.js",
   "sideEffects": false,
   "scripts": {
-    "build": "tsc",
+    "build": "rollup -c rollup.config.js",
     "test": "jest",
     "commit": "npx git-cz",
     "postcommit": "npm run commitmsg",
@@ -27,9 +27,11 @@
     "@types/jest": "^24.0.11",
     "commitizen": "^3.0.7",
     "cz-conventional-changelog": "^2.1.0",
-    "cz-customizable": "^5.10.0",
     "jest": "^24.7.1",
+    "rollup": "^1.9.0",
+    "rollup-plugin-typescript": "^1.0.1",
     "ts-jest": "^24.0.2",
+    "tslib": "^1.9.3",
     "typescript": "^3.4.2",
     "validate-commit-msg": "^2.14.0"
   },
@@ -37,5 +39,8 @@
     "commitizen": {
       "path": "cz-conventional-changelog"
     }
+  },
+  "dependencies": {
+    "@bazel/typescript": "^0.27.10"
   }
 }

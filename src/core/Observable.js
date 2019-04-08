@@ -6,8 +6,8 @@ export class Observable {
       this._subscribe = subscribeLogic
     }
   }
-  subscribe(subscriber) {
-    const subscriber = new Subscriber(subscriber)
+  subscribe(destination) {
+    const subscriber = new Subscriber(destination)
     const subscription = this._subscribe(subscriber)
     subscriber.add(subscription)
     return subscriber
