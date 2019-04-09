@@ -18,7 +18,7 @@ it('should pass basic test', done => {
     const timer = setTimeout(() => {
       subscriber.next(1)
       subscriber.complete()
-    }, 1000)
+    }, 10)
 
     const unsubscribe = () => {
       clearTimeout(timer)
@@ -41,7 +41,7 @@ it('should never be called when unsubscribed', (done) => {
   const ob$ = new Observable(subscriber => {
     const timer = setTimeout(() => {
       subscriber.next(1)
-    }, 300)
+    }, 30)
     const unsubscribe = () => {
       clearTimeout(timer)
     }
@@ -50,10 +50,10 @@ it('should never be called when unsubscribed', (done) => {
   const sub = ob$.subscribe(subscriber)
   setTimeout(() => {
     sub.unsubscribe()
-  }, 100)
+  }, 10)
   setTimeout(() => {
     expect(mockNext).not.toBeCalled()
     done()
-  }, 400)
+  }, 40)
 })
 
