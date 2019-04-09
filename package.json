@@ -7,7 +7,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "rollup -c rollup.config.js",
-    "test": "jest",
+    "test": "jest --detectOpenHandles --forceExit",
     "commit": "npx git-cz",
     "postcommit": "npm run commitmsg",
     "commitmsg": "validate-commit-msg"
@@ -39,8 +39,5 @@
     "commitizen": {
       "path": "cz-conventional-changelog"
     }
-  },
-  "dependencies": {
-    "@bazel/typescript": "^0.27.10"
   }
 }
