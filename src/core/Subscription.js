@@ -35,6 +35,9 @@ export class Subscription {
   add(childSubscription) {
     // 暂时只考虑teardownLogic的场景
     if (!childSubscription) return Subscription.EMPTY
+    // NOTE: FIX cannot add parent more than once error
+    // 在interval的case场景下，可能会存在subscriber.add(subscriber),添加自身
+    if(childSubscription === this) return childSubscription
     const subscriptions = this._subscriptions || (this._subscriptions = [])
     subscriptions.push(childSubscription)
     childSubscription._addParent(this)

@@ -1,4 +1,4 @@
-import { Subscription } from '@/core'
+import { Subscription } from '@bjs/core'
 
 export class AsyncScheduler {
   constructor(AsyncAction) {
