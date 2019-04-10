@@ -1,8 +1,8 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
-  typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (global = global || self, factory(global.bjs = {}));
-}(this, function (exports) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('fs')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'fs'], factory) :
+  (global = global || self, factory(global.bjs = {}, global.fs));
+}(this, function (exports, fs) { 'use strict';
 
   class Subscription {
     constructor(teardownLogic) {
@@ -11,7 +11,7 @@
       }
       this.hasUnsubscribed = false;
       this._subscriptions = null;
-      this._parent = null;
+      this._parents = null;
     }
     unsubscribe() {
       if (this.hasUnsubscribed) return
@@ -38,13 +38,69 @@
         }
       }
     }
-    add(childSubscription) {
-      // 暂时只考虑teardownLogic的场景
-      if (!childSubscription) return Subscription.EMPTY
-      const subscriptions = this._subscriptions || (this._subscriptions = []);
-      subscriptions.push(childSubscription);
-      childSubscription._addParent(this);
-      return childSubscription
+    add(teardownLogic) {
+      if(!teardownLogic) return Subscription.EMPTY
+      let subscription = teardownLogic;
+      switch (typeof teardownLogic) {
+        case 'function':
+          subscription = new Subscription(teardownLogic);
+        case 'object':
+          if (subscription === this || subscription.hasUnsubscribed || typeof subscription.unsubscribe !== 'function') {
+            return subscription;
+          } else if (this.hasUnsubscribed) {
+            subscription.unsubscribe();
+            return subscription
+          } else if (!(subscription instanceof Subscription)) {
+            // TODO:
+            // UNKOWN REASON
+            const tmp = subscription;
+            subscription = new Subscription();
+            subscription._subscriptions = [tmp];
+          }
+          break;
+        default: {
+          throw new Error('unrecognized teardown ' + teardown + ' added to Subscription.')
+        }
+      }
+
+      let { _parents } = subscription;
+      if (_parents && _parents.indexOf(this) > -1)  return subscription;
+      if (_parents === null) {
+        subscription._parents = [this];
+      } else {
+        _parents.push(this);
+      }
+
+      // Optimize for the common case when adding the first subscription.
+      const subscriptions = this._subscriptions;
+      if (subscriptions === null) {
+        this._subscriptions = [subscription];
+      } else {
+        subscriptions.push(subscription);
+      }
+
+      return subscription;
+    }
+    handleRelations(subscription) {
+      let { _parents } = subscription;
+      if(_parents && _parents.indexOf(subscription) > -1) return subscription
+      if (_parents === null) {
+        // If we don't have a parent, then set `subscription._parents` to
+        // the `this`, which is the common case that we optimize for.
+        subscription._parents = [this];
+      } else {
+        // 新增
+        _parents.push(this);
+      }
+      // Optimize for the common case when adding the first subscription.
+      const subscriptions = this._subscriptions;
+      if (subscriptions === null) {
+        this._subscriptions = [subscription];
+      } else {
+        subscriptions.push(subscription);
+      }
+
+      return subscription;
     }
     remove(childSubscription) {
       const subscriptions = this._subscriptions;
@@ -114,20 +170,170 @@
       if(subscribeLogic) {
         this._subscribe = subscribeLogic;
       }
+      this.upstream = null;
+      this.operator = null;
     }
-    subscribe(destination) {
-      const subscriber = new Subscriber(destination);
-      const subscription = this._subscribe(subscriber);
+    subscribe(observer) {
+      let subscriber;
+      if(observer instanceof Subscriber) {
+        subscriber = observer;
+      } else {
+        subscriber = new Subscriber(observer);
+      }
+      let subscription;
+      if(this.operator) {
+        subscription = this.operator.call(subscriber, this.upstream);
+      } else {
+        subscription = this._subscribe(subscriber);
+      }
       subscriber.add(subscription);
       return subscriber
+    }
+    pipe(...fns) {
+      if(fns.length === 0) return this
+      return fns.reduce((upstream, fn) => fn(upstream), this)
+    }
+    lift(op) {
+      const newOb$ = new Observable();
+      newOb$.upstream = this;
+      newOb$.operator = op;
+      return newOb$
+    }
+  }
+
+  class AsyncScheduler {
+    constructor(AsyncAction) {
+      this.AsyncAction = AsyncAction;
+      this.actionQueue = [];
+      this.isExecutingWork = false;
+    }
+    flushQueue(action) {
+      if (this.isExecutingWork) {
+        this.actionQueue.push(action);
+        return
+      }
+      this.isExecutingWork = true;
+      do {
+        action.execute(action.state);
+      } while (action = this.actionQueue.shift())
+      this.isExecutingWork = false;
+    }
+    schedule(work, delay, state) {
+      const asyncAction = new this.AsyncAction(this, work);
+      return asyncAction.schedule(state, delay)
+    }
+  }
+  class AsyncAction extends Subscription {
+    constructor(scheduler, work) {
+      super();
+      this.scheduler = scheduler;
+      this.work = work;
+
+      this.delay = undefined;
+      this.state = undefined;
+      this.timerId = undefined;
+      this.pending = false;
+    }
+    schedule(state, delay) {
+      /* 在delay后执行this.work， 传入的值为this.state */
+      if (this.hasUnsubscribed) return
+      this.state = state;
+
+      const timerId = this.timerId;
+      if (timerId != null) {
+        // 如果timerId已有，即之前已经schedule过一次任务了，则首先判断是否需要执行cancenAsyncTask
+        this.timerId = this.cancelAsyncTask(timerId, delay);
+      }
+      this.pending = true;
+      this.delay = delay;
+      // 如果是等时间间隔的相同任务，那么timerId不变，否则重新执行setupAsyncTask
+      this.timerId = this.timerId || this.setupAsyncTask(this.scheduler, delay);
+      return this
+    }
+    setupAsyncTask(scheduler, delay = 0) {
+      /* 在delay时间后，执行scheduler的flushQueue操作 */
+      return setInterval(scheduler.flushQueue.bind(scheduler, this), delay)
+    }
+    cancelAsyncTask(id, delay) {
+      /* 同delay的相同任务，不用执行clearInterval */
+      if (delay !== null && this.delay === delay && this.pending === false) return id
+      clearInterval(id);
+    }
+    execute(state) {
+      this.pending = false;
+      /* 执行work */
+      this.work(state);
+    }
+    _unsubscribe() {
+      /* 取消任务 */
+      const timerId = this.timerId;
+      const scheduler = this.scheduler;
+      const index = scheduler.actionQueue.indexOf(this);
+
+      this.pending = false;
+      this.task = null;
+      this.scheduler = null;
+      this.state = undefined;
+      if (index !== -1) {
+        scheduler.actionQueue.splice(index, 1);
+      }
+      if (timerId != null) {
+        // 传入delay为null,强制clearInterval
+        this.cancelAsyncTask(timerId, null);
+      }
+      this.delay = null;
+    }
+  }
+  const async = new AsyncScheduler(AsyncAction);
+
+  class InnerSubscriber extends Subscriber {
+    constructor(parent, outerValue, outerIndex) {
+      // InnerSubscriber是没有destination的，它只是一个中间订阅者，实际接触observer的是OuterSubscriber
+      super();
+      // 这里的parent就是outerSubscriber
+      this.parent = parent;
+      this.outerValue = outerValue;
+      this.outerIndex = outerIndex;
+      this.innerIndex = 0;
+    }
+    _next(value) {
+      this.parent.gotNextMessageFromInner(this.outerValue, value, this.outerIndex, this.innerIndex++, this);
+    }
+    _error(reason) {
+      this.parent.gotErrorMessageFromInner(reason, this);
+      this.unsubscribe();
+    }
+    _complete() {
+      this.parent.gotCompleteMessageFromInner(this);
+      this.unsubscribe();
+    }
+  }
+
+  class OuterSubscriber extends Subscriber {
+    constructor(destination) {
+      super(destination);
+    }
+    // 携带足够的信息
+    gotNextMessageFromInner(outerVal, innerVal, outerIndex, innerIndex, innerSub) {
+        this.destination.next(innerVal);
+    }
+    gotErrorMessageFromInner(error, innerSub) {
+        this.destination.error(error);
+    }
+    gotCompleteMessageFromInner(innerSub) {
+        this.destination.complete();
     }
   }
 
   // export * from './operators'
 
+  exports.AsyncScheduler = AsyncScheduler;
+  exports.InnerSubscriber = InnerSubscriber;
   exports.Observable = Observable;
+  exports.OuterSubscriber = OuterSubscriber;
   exports.Subscriber = Subscriber;
   exports.Subscription = Subscription;
+  exports.async = async;
 
   Object.defineProperty(exports, '__esModule', { value: true });
 

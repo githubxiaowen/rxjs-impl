@@ -11,10 +11,10 @@ cache:
 
 before_install:
   - nvm install $NODE_VER && nvm use $NODE_VER
-  - npm install -g npm && node -v && npm -v
+  - npm install -g npm jest && node -v && npm -v
 install:
   - npm ci
 
 script:
-  - npm test
+  - jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage
   - echo "job done"
