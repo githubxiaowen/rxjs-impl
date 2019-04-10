@@ -10,15 +10,19 @@ export class Subscription {
   unsubscribe() {
     if (this.hasUnsubscribed) return
     const {
-      _parent,
+      _parents,
       _subscriptions,
       _unsubscribe
     } = this
 
     this.hasUnsubscribed = true
-    this._parent = null
+    this._parents = null
 
-    _parent && (_parent.remove(this))
+    if(_parents) {
+      _parents.forEach(parent => {
+        parent.remove(this)
+      })
+    }
     if (_unsubscribe) {
       // 暂时不考虑error
       _unsubscribe.call(this)
@@ -103,16 +107,6 @@ export class Subscription {
       if (subscriptionIndex !== -1) {
         subscriptions.splice(subscriptionIndex, 1)
       }
-    }
-  }
-  _addParent(subscription) {
-    let {
-      _parent
-    } = this
-    if (!_parent) {
-      this._parent = subscription
-    } else {
-      throw Error('cannot add parent more than once')
     }
   }
 }
