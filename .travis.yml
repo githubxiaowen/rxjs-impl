@@ -16,5 +16,5 @@ install:
   - npm ci
 
 script:
-  - jest --coverage && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage
+  - npm t
   - echo "job done"
