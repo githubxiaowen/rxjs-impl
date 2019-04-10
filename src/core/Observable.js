@@ -9,8 +9,13 @@ export class Observable {
     this.upstream = null
     this.operator = null
   }
-  subscribe(subscriber) {
-    const subscriber = new Subscriber(subscriber)
+  subscribe(observer) {
+    let subscriber
+    if(observer instanceof Subscriber) {
+      subscriber = observer
+    } else {
+      subscriber = new Subscriber(observer)
+    }
     let subscription
     if(this.operator) {
       subscription = this.operator.call(subscriber, this.upstream)

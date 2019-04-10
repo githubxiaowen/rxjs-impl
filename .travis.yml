@@ -1,16 +1,17 @@
 language: node_js
 
-node_js:
-  - '10'
-
+env:
+  matrix:
+  - NODE_VER=8
+  - NODE_VER=10
 cache:
   timeout: 10000
   directories:
     - 'node_modules'
 
 before_install:
+  - nvm install $NODE_VER && nvm use $NODE_VER
   - npm install -g npm && node -v && npm -v
-
 install:
   - npm ci
 

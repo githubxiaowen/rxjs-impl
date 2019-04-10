@@ -5,7 +5,7 @@ export class Subscription {
     }
     this.hasUnsubscribed = false
     this._subscriptions = null
-    this._parent = null
+    this._parents = null
   }
   unsubscribe() {
     if (this.hasUnsubscribed) return
@@ -32,16 +32,69 @@ export class Subscription {
       }
     }
   }
-  add(childSubscription) {
-    // 暂时只考虑teardownLogic的场景
-    if (!childSubscription) return Subscription.EMPTY
-    // NOTE: FIX cannot add parent more than once error
-    // 在interval的case场景下，可能会存在subscriber.add(subscriber),添加自身
-    if(childSubscription === this) return childSubscription
-    const subscriptions = this._subscriptions || (this._subscriptions = [])
-    subscriptions.push(childSubscription)
-    childSubscription._addParent(this)
-    return childSubscription
+  add(teardownLogic) {
+    if(!teardownLogic) return Subscription.EMPTY
+    let subscription = teardownLogic
+    switch (typeof teardownLogic) {
+      case 'function':
+        subscription = new Subscription(teardownLogic)
+      case 'object':
+        if (subscription === this || subscription.hasUnsubscribed || typeof subscription.unsubscribe !== 'function') {
+          return subscription;
+        } else if (this.hasUnsubscribed) {
+          subscription.unsubscribe()
+          return subscription
+        } else if (!(subscription instanceof Subscription)) {
+          // TODO:
+          // UNKOWN REASON
+          const tmp = subscription
+          subscription = new Subscription()
+          subscription._subscriptions = [tmp]
+        }
+        break;
+      default: {
+        throw new Error('unrecognized teardown ' + teardown + ' added to Subscription.')
+      }
+    }
+
+    let { _parents } = subscription;
+    if (_parents && _parents.indexOf(this) > -1)  return subscription;
+    if (_parents === null) {
+      subscription._parents = [this];
+    } else {
+      _parents.push(this);
+    }
+
+    // Optimize for the common case when adding the first subscription.
+    const subscriptions = this._subscriptions;
+    if (subscriptions === null) {
+      this._subscriptions = [subscription];
+    } else {
+      subscriptions.push(subscription);
+    }
+
+    return subscription;
+  }
+  handleRelations(subscription) {
+    let { _parents } = subscription;
+    if(_parents && _parents.indexOf(subscription) > -1) return subscription
+    if (_parents === null) {
+      // If we don't have a parent, then set `subscription._parents` to
+      // the `this`, which is the common case that we optimize for.
+      subscription._parents = [this];
+    } else {
+      // 新增
+      _parents.push(this);
+    }
+    // Optimize for the common case when adding the first subscription.
+    const subscriptions = this._subscriptions;
+    if (subscriptions === null) {
+      this._subscriptions = [subscription];
+    } else {
+      subscriptions.push(subscription);
+    }
+
+    return subscription;
   }
   remove(childSubscription) {
     const subscriptions = this._subscriptions

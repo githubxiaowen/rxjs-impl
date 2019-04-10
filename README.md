@@ -5,4 +5,5 @@ begger version of rxjs
 
 ## TODOS
 
+- [x] fix interval unsubscribe logic
 - [ ] marble testing

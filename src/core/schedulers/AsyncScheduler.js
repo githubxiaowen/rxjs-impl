@@ -1,5 +1,6 @@
 import { Subscription } from '@bjs/core'
 
+
 export class AsyncScheduler {
   constructor(AsyncAction) {
     this.AsyncAction = AsyncAction
@@ -22,7 +23,7 @@ export class AsyncScheduler {
     return asyncAction.schedule(state, delay)
   }
 }
-export class AsyncAction extends Subscription {
+class AsyncAction extends Subscription {
   constructor(scheduler, work) {
     super()
     this.scheduler = scheduler
@@ -31,25 +32,35 @@ export class AsyncAction extends Subscription {
     this.delay = undefined
     this.state = undefined
     this.timerId = undefined
+    this.pending = false
   }
   schedule(state, delay) {
     /* 在delay后执行this.work， 传入的值为this.state */
     if (this.hasUnsubscribed) return
     this.state = state
-    this.delay = delay
 
-    this.timerId = this.setupAsyncTask(this.scheduler, delay)
+    const timerId = this.timerId
+    if (timerId != null) {
+      // 如果timerId已有，即之前已经schedule过一次任务了，则首先判断是否需要执行cancenAsyncTask
+      this.timerId = this.cancelAsyncTask(timerId, delay)
+    }
+    this.pending = true
+    this.delay = delay
+    // 如果是等时间间隔的相同任务，那么timerId不变，否则重新执行setupAsyncTask
+    this.timerId = this.timerId || this.setupAsyncTask(this.scheduler, delay)
     return this
   }
   setupAsyncTask(scheduler, delay = 0) {
     /* 在delay时间后，执行scheduler的flushQueue操作 */
-    return setTimeout(scheduler.flushQueue.bind(scheduler, this), delay)
+    return setInterval(scheduler.flushQueue.bind(scheduler, this), delay)
   }
-  cancelAsyncTask(id) {
-    /* 取消任务 */
-    clearTimeout(id)
+  cancelAsyncTask(id, delay) {
+    /* 同delay的相同任务，不用执行clearInterval */
+    if (delay !== null && this.delay === delay && this.pending === false) return id
+    clearInterval(id)
   }
   execute(state) {
+    this.pending = false
     /* 执行work */
     this.work(state)
   }
@@ -57,18 +68,20 @@ export class AsyncAction extends Subscription {
     /* 取消任务 */
     const timerId = this.timerId
     const scheduler = this.scheduler
-    const index = scheduler.actions.indexOf(this)
+    const index = scheduler.actionQueue.indexOf(this)
 
+    this.pending = false
     this.task = null
     this.scheduler = null
     this.state = undefined
-    if(index !== -1) {
-      scheduler.actions.splice(index, 1)
+    if (index !== -1) {
+      scheduler.actionQueue.splice(index, 1)
     }
-    if(timerId != null) {
-      this.cancelAsyncTask(timerId)
+    if (timerId != null) {
+      // 传入delay为null,强制clearInterval
+      this.cancelAsyncTask(timerId, null)
     }
     this.delay = null
-   }
+  }
 }
 export const async = new AsyncScheduler(AsyncAction)

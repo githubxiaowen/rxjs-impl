@@ -2,7 +2,6 @@ import {
   Observable,
   Subscription
 } from '@bjs/core'
-
 it('should pass basic test', done => {
   const subscriber = {
     next(value) {

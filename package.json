@@ -7,7 +7,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "rollup -c rollup.config.js",
-    "test": "jest --detectOpenHandles --forceExit",
+    "test": "jest",
     "commit": "npx git-cz",
     "postcommit": "npm run commitmsg",
     "commitmsg": "validate-commit-msg"
