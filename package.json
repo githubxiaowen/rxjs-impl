@@ -1,5 +1,5 @@
 {
-  "name": "achajs",
+  "name": "acha",
   "version": "0.0.1",
   "description": "begger version of rxjs",
   "main": "dist/index.js",
