@@ -1,7 +1,7 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('fs')) :
   typeof define === 'function' && define.amd ? define(['exports', 'fs'], factory) :
-  (global = global || self, factory(global.bjs = {}, global.fs));
+  (global = global || self, factory(global.acha = {}, global.fs));
 }(this, function (exports, fs) { 'use strict';
 
   class Subscription {
@@ -16,15 +16,19 @@
     unsubscribe() {
       if (this.hasUnsubscribed) return
       const {
-        _parent,
+        _parents,
         _subscriptions,
         _unsubscribe
       } = this;
 
       this.hasUnsubscribed = true;
-      this._parent = null;
+      this._parents = null;
 
-      _parent && (_parent.remove(this));
+      if(_parents) {
+        _parents.forEach(parent => {
+          parent.remove(this);
+        });
+      }
       if (_unsubscribe) {
         // 暂时不考虑error
         _unsubscribe.call(this);
@@ -109,16 +113,6 @@
         if (subscriptionIndex !== -1) {
           subscriptions.splice(subscriptionIndex, 1);
         }
-      }
-    }
-    _addParent(subscription) {
-      let {
-        _parent
-      } = this;
-      if (!_parent) {
-        this._parent = subscription;
-      } else {
-        throw Error('cannot add parent more than once')
       }
     }
   }
@@ -325,12 +319,177 @@
     }
   }
 
+  class Subject extends Observable {
+    constructor() {
+      super();
+      this.stoppedAcceptData = false;
+      this.hasUnsubscribed = false;
+      this.observers = [];
+      this.hasError = false;
+      this.thrownError = null;
+    }
+    next(value) {
+      if (this.hasUnsubscribed) throw Error('subject has unsubscribed')
+      if (!this.stoppedAcceptData) {
+        const { observers } = this;
+        const copy = observers.slice();
+        for (let i = 0; i < copy.length; i++) {
+          copy[i].next(value);
+        }
+      }
+    }
+    error(error) {
+      if (this.hasUnsubscribed) throw Error('subject has unsubscribed')
+      if (!this.stoppedAcceptData) {
+        this.hasError = true;
+        this.thrownError = error;
+        this.stoppedAcceptData = true;
+
+        const { observers } = this;
+        const copy = observers.slice();
+        for (let i = 0; i < copy.length; i++) {
+          copy[i].error(value);
+        }
+
+        this.observers.length = 0;
+      }
+    }
+    complete() {
+      if (this.hasUnsubscribed) throw Error('subject has unsubscribed')
+      this.stoppedAcceptData = true;
+      const { observers } = this;
+      const len = observers.length;
+      const copy = observers.slice();
+      for (let i = 0; i < len; i++) {
+        copy[i].complete();
+      }
+      this.observers.length = 0;
+    }
+    _subscribe(subscriber) {
+      if (this.hasUnsubscribed) {
+        throw Error('subject has unsubscribed')
+      } else if (this.hasError) {
+        subscriber.error(this.thrownError);
+        return Subscription.EMPTY;
+      } else if (this.stoppedAcceptData) {
+        subscriber.complete();
+        return Subscription.EMPTY;
+      } else {
+        this.observers.push(subscriber);
+        return new SubjectSubscription(this, subscriber);
+      }
+    }
+    unsubscribe() {
+      this.stoppedAcceptData = true;
+      this.hasUnsubscribed = true;
+      this.observers = null;
+    }
+  }
+
+  class SubjectSubscription extends Subscription {
+    constructor(subject, subscriber) {
+      super();
+      this.subject = subject;
+      this.subscriber = subscriber;
+      this.hasUnsubscribed = false;
+    }
+    unsubscribe() {
+      if (this.hasUnsubscribed) return
+
+      this.hasUnsubscribed = true;
+
+      const subject = this.subject;
+      const observers = subject.observers;
+
+      this.subject = null;
+
+      if (!observers || observers.length === 0 || subject.isStopped || subject.stoppedAcceptData) {
+        return;
+      }
+
+      const subscriberIndex = observers.indexOf(this.subscriber);
+
+      if (subscriberIndex !== -1) {
+        observers.splice(subscriberIndex, 1);
+      }
+    }
+  }
+
+  class ConnectableObservable extends Observable {
+    constructor(source, subjectFactory) {
+      this.source = source;
+      this.subjectFactory = subjectFactory;
+
+      this._subject = null;
+      this._refCount = 0;
+      this._connection = null;
+      this._isCompleted = false;
+    }
+    _subscribe(subscriber) {
+      return this._getSubject().subscribe(subscriber)
+    }
+
+    _getSubject() {
+      const subject = this._subject;
+      if (!subject || subject.stoppedAcceptData) {
+        this._subject = this.subjectFactory();
+      }
+      return this._subject
+    }
+    connect() {
+      let connection = this._connection;
+      if (!connection) {
+        this._isCompleted = false;
+        connection = this._connection = new Subscription();
+        connection.add(this.source
+          .subscribe(new ConnectableSubscriber(this._getSubject(), this)));
+        if (connection.closed) {
+          this._connection = null;
+          connection = Subscription.EMPTY;
+        }
+      }
+      return connection
+    }
+    refCount() { /* TODO */ }
+  }
+
+  class ConnectableSubscriber extends Subscriber {
+    constructor(subject, connectable) {
+      super(subject);
+      this.connectable = connectable;
+    }
+    _error(error) {
+      this._unsubscribe();
+      super._error(err);
+    }
+    _complete() {
+      this.connectable._isCompleted = true;
+      this._unsubscribe();
+      super._complete();
+    }
+    _unsubscribe() {
+      const connectable = this.connectable;
+      if (connectable) {
+        this.connectable = null;
+        const connection = connectable._connection;
+        connectable._refCount = 0;
+        connectable._subject = null;
+        connectable._connection = null;
+        if (connection) {
+          connection.unsubscribe();
+        }
+      }
+    }
+  }
+
   // export * from './operators'
 
   exports.AsyncScheduler = AsyncScheduler;
+  exports.ConnectableObservable = ConnectableObservable;
   exports.InnerSubscriber = InnerSubscriber;
   exports.Observable = Observable;
   exports.OuterSubscriber = OuterSubscriber;
+  exports.Subject = Subject;
   exports.Subscriber = Subscriber;
   exports.Subscription = Subscription;
   exports.async = async;
