@@ -1,5 +1,4 @@
 import { Subscriber } from './Subscriber'
-import { fstat } from 'fs';
 
 export class Observable {
   constructor(subscribeLogic) {

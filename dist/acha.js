@@ -1,8 +1,8 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('fs')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'fs'], factory) :
-  (global = global || self, factory(global.acha = {}, global.fs));
-}(this, function (exports, fs) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = global || self, factory(global.acha = {}));
+}(this, function (exports) { 'use strict';
 
   class Subscription {
     constructor(teardownLogic) {
