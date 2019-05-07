@@ -1,7 +1,7 @@
 import {
   Observable,
   Subscription
-} from '@bjs/core'
+} from '@acha/core'
 it('should pass basic test', done => {
   const subscriber = {
     next(value) {

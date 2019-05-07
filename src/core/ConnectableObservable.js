@@ -1,4 +1,4 @@
-import { Subscriber, Observable, Subscription } from '@bjs/core'
+import { Subscriber, Observable, Subscription } from '@acha/core'
 export class ConnectableObservable extends Observable {
   constructor(source, subjectFactory) {
     this.source = source

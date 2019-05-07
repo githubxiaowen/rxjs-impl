@@ -1,4 +1,4 @@
-import { async, Observable } from '@bjs/core'
+import { async, Observable } from '@acha/core'
 
 function work(state) {
   const { subscriber, counter, intervalTime } = state

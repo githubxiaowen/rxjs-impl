@@ -1,5 +1,5 @@
-import { Subject } from '@bjs/core'
-import { multicast, interval, take } from '@bjs/operators'
+import { Subject } from '@acha/core'
+import { multicast, interval, take } from '@acha/operators'
 jest.setTimeout(30000);
 it('operator [multicast] should pass basic test', (done) => {
   const TAKETIMES = 2

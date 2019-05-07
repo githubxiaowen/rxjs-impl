@@ -4,7 +4,7 @@ import {
   interval,
   take,
   map
-} from '@bjs/operators'
+} from '@acha/operators'
 it('operator [forkJoin] should pass basic test', (done) => {
   let mockNext = jest.fn(x => x)
   forkJoin(

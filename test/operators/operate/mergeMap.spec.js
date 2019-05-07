@@ -5,7 +5,7 @@ import {
   take,
   map,
   mergeMap
-} from '@bjs/operators'
+} from '@acha/operators'
 
 // https://rxjs.dev/api/operators/mergeMap
 it('operator [mergeMap] should pass basic test', (done) => {

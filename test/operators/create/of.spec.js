@@ -1,8 +1,8 @@
 import {
   Observable,
   Subscription
-} from '@bjs/core'
-import { of } from '@bjs/operators'
+} from '@acha/core'
+import { of } from '@acha/operators'
 
 it('should pass basic test', done => {
   let prevVal = 1

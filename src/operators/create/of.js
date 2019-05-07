@@ -1,6 +1,6 @@
 import {
   Observable
-} from '@bjs/core'
+} from '@acha/core'
 
 export function of (...input) {
   return new Observable(subscriber => {

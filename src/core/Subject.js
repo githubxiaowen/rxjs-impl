@@ -1,4 +1,4 @@
-import { Observable, Subscription } from '@bjs/core'
+import { Observable, Subscription } from '@acha/core'
 
 export class Subject extends Observable {
   constructor() {

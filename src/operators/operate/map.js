@@ -1,4 +1,4 @@
-import { Subscriber } from '@bjs/core'
+import { Subscriber } from '@acha/core'
 
 export function map(project) {
     return upstream$ => upstream$.lift(new MapOperator(project))

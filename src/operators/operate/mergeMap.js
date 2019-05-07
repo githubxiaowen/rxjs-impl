@@ -1,7 +1,7 @@
 import {
   OuterSubscriber,
   InnerSubscriber
-} from '@bjs/core'
+} from '@acha/core'
 
 export function mergeMap(project, concurrent = Number.POSITIVE_INFINITY) {
   return source$ => source$.lift(new MergeMapOperator(project, concurrent))

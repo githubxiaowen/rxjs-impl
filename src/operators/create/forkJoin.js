@@ -3,7 +3,7 @@ import {
   Observable,
   OuterSubscriber,
   InnerSubscriber
-} from '@bjs/core'
+} from '@acha/core'
 
 export function forkJoin(...obs) {
   return new Observable(subscriber => {

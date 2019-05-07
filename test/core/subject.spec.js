@@ -1,5 +1,5 @@
-import { Subject } from '@bjs/core'
-import { interval,take } from "@bjs/operators"
+import { Subject } from '@acha/core'
+import { interval,take } from "@acha/operators"
 
 it('[subject] should pass basic test', done => {
   const sub = new Subject()

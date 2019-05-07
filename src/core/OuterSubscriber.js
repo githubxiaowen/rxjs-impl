@@ -1,4 +1,4 @@
-import { Subscriber } from '@bjs/core'
+import { Subscriber } from '@acha/core'
 
 export class OuterSubscriber extends Subscriber {
   constructor(destination) {

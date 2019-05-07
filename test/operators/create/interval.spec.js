@@ -1,7 +1,7 @@
 import {
   interval,
   take
-} from '@bjs/operators'
+} from '@acha/operators'
 
 
 it('operator [interval] should pass basic test', (done) => {

@@ -1,4 +1,4 @@
-import { of, take } from '@bjs/operators'
+import { of, take } from '@acha/operators'
 it('operator [take] should pass basic test', () => {
   const TAKETIMES = 2
   let prevVal = 1

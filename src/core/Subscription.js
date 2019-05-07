@@ -36,6 +36,7 @@ export class Subscription {
       }
     }
   }
+
   add(teardownLogic) {
     if(!teardownLogic) return Subscription.EMPTY
     let subscription = teardownLogic
@@ -61,13 +62,13 @@ export class Subscription {
       }
     }
 
-    let { _parents } = subscription;
-    if (_parents && _parents.indexOf(this) > -1)  return subscription;
-    if (_parents === null) {
-      subscription._parents = [this];
-    } else {
-      _parents.push(this);
-    }
+  let { _parents } = subscription;
+  if (_parents && _parents.indexOf(this) > -1)  return subscription;
+  if (_parents === null) {
+    subscription._parents = [this];
+  } else {
+    _parents.push(this);
+  }
 
     // Optimize for the common case when adding the first subscription.
     const subscriptions = this._subscriptions;
@@ -79,36 +80,16 @@ export class Subscription {
 
     return subscription;
   }
-  handleRelations(subscription) {
-    let { _parents } = subscription;
-    if(_parents && _parents.indexOf(subscription) > -1) return subscription
-    if (_parents === null) {
-      // If we don't have a parent, then set `subscription._parents` to
-      // the `this`, which is the common case that we optimize for.
-      subscription._parents = [this];
-    } else {
-      // 新增
-      _parents.push(this);
-    }
-    // Optimize for the common case when adding the first subscription.
-    const subscriptions = this._subscriptions;
-    if (subscriptions === null) {
-      this._subscriptions = [subscription];
-    } else {
-      subscriptions.push(subscription);
-    }
 
-    return subscription;
-  }
-  remove(childSubscription) {
-    const subscriptions = this._subscriptions
-    if (subscriptions) {
-      const subscriptionIndex = subscriptions.indexOf(childSubscription)
-      if (subscriptionIndex !== -1) {
-        subscriptions.splice(subscriptionIndex, 1)
-      }
+remove(childSubscription) {
+  const subscriptions = this._subscriptions
+  if (subscriptions) {
+    const subscriptionIndex = subscriptions.indexOf(childSubscription)
+    if (subscriptionIndex !== -1) {
+      subscriptions.splice(subscriptionIndex, 1)
     }
   }
+}
 }
 Subscription.EMPTY = ((empty => {
   empty.hasUnsubscribed = true;

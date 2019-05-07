@@ -1,4 +1,4 @@
-import { Subscriber } from '@bjs/core'
+import { Subscriber } from '@acha/core'
 export function take(count) {
   return source => source.lift(new TakeOperator(count))
 }

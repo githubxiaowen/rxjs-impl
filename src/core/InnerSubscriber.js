@@ -1,5 +1,5 @@
 
-import { Subscriber } from '@bjs/core'
+import { Subscriber } from '@acha/core'
 
 export class InnerSubscriber extends Subscriber {
   constructor(parent, outerValue, outerIndex) {

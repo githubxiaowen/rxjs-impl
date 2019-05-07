@@ -1,4 +1,4 @@
-import { ConnectableObservable } from '@bjs/core'
+import { ConnectableObservable } from '@acha/core'
 export function multicast(subjectOrSubjectFactory, projector) {
   return source => {
     let subjectFactory
